@@ -1,37 +1,36 @@
-set(LIBRARY_NAME "dft")
+cmake_minimum_required(VERSION 3.19)
 
-# Create main library
-add_library(${LIBRARY_NAME}
-STATIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/dft.c"
-)
+project(fft_opt VERSION 0.0.1 LANGUAGES C CXX)
 
-target_include_directories(${LIBRARY_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(GTEST_GIT_REPO_PATH "${CMAKE_SOURCE_DIR}/3rd-party/gtest" CACHE STRING "Path for GTest git repository")
 
-target_link_libraries(${LIBRARY_NAME} PRIVATE CommonConfiguration)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
-function(add_obj_lib OBJ_NAME CONFIGURATION)
-    add_library(${OBJ_NAME} OBJECT "${CMAKE_CURRENT_SOURCE_DIR}/src/${OBJ_NAME}.c")
-    target_include_directories(${OBJ_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-    target_link_libraries(${OBJ_NAME} PRIVATE ${CONFIGURATION})
-    target_link_libraries(${LIBRARY_NAME} PRIVATE ${OBJ_NAME})
-endfunction()
+option(ENABLE_TEST "Build test" OFF)
+option(ENABLE_BENCH "Build benchmarks" ON)
+option(TARGET_ARCH "Target architecture" RISCV_GENERIC)
+option(BUILD_STATIC "Build static" ON)
+option(USE_OPENMP "Build with -fopenmp" ON)
+option(BUILD_TYPE "Build type" Release)
 
-# Custom configuration for separate files example
-add_library(CustomConfiguration INTERFACE)
-target_link_libraries(CustomConfiguration INTERFACE BaseConfiguration)
-if(BUILD_TYPE STREQUAL "Release")
-    # Add custom optimization flags here:
-    target_compile_options(CustomConfiguration INTERFACE -O3)
-else()
-    target_link_libraries(CustomConfiguration INTERFACE BaseOptConfiguration)
+include(cmake/common_configuration.cmake)
+
+#
+# Build library
+#
+add_subdirectory("${CMAKE_SOURCE_DIR}/lib")
+
+#
+# Build tests
+#
+if(ENABLE_TEST)
+    add_subdirectory("${GTEST_GIT_REPO_PATH}")
+    add_subdirectory("${CMAKE_SOURCE_DIR}/test")
 endif()
 
 #
-# Object libraries with separate compiler keys
+# Build benchmarks
 #
-add_obj_lib("dft2" CommonConfiguration)
-add_obj_lib("dft4" CommonConfiguration)
-add_obj_lib("dft8" CustomConfiguration)
-add_obj_lib("dft16" CommonConfiguration)
-add_obj_lib("dft32" CustomConfiguration)
+if(ENABLE_BENCH)
+    add_subdirectory("${CMAKE_SOURCE_DIR}/perf")
+endif()
